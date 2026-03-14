@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"log"
 	"worker_pool/internal/models"
 
 	"github.com/jackc/pgx/v5"
@@ -18,7 +19,7 @@ func NewTaskStore(db *pgxpool.Pool) *TaskStore {
 }
 
 func (s *TaskStore) GetAll(ctx context.Context) ([]models.Task, error) {
-	rows, err := s.db.Query(ctx, `SELECT * FROM tasks`)
+	rows, err := s.db.Query(ctx, `SELECT id, description FROM tasks`)
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +29,7 @@ func (s *TaskStore) GetAll(ctx context.Context) ([]models.Task, error) {
 	for rows.Next() {
 		var task models.Task
 		if err := rows.Scan(&task.ID, &task.Description); err != nil {
+			log.Printf("GetAll error: %s", err)
 			return nil, err
 		}
 		if err := rows.Err(); err != nil {
@@ -40,7 +42,7 @@ func (s *TaskStore) GetAll(ctx context.Context) ([]models.Task, error) {
 
 func (s *TaskStore) GetByID(ctx context.Context, id int) (models.Task, error) {
 	var task models.Task
-	err := s.db.QueryRow(ctx, `SELECT * FROM tasks WHERE id = $1`, id).Scan(&task.ID, &task.Description)
+	err := s.db.QueryRow(ctx, `SELECT * FROM tasks WHERE id = $1 `, id).Scan(&task.ID, &task.Description)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return task, nil
 	}
@@ -51,7 +53,7 @@ func (s *TaskStore) GetByID(ctx context.Context, id int) (models.Task, error) {
 }
 
 func (s *TaskStore) Create(ctx context.Context, task models.Task) (models.Task, error) {
-	err := s.db.QueryRow(ctx, `INSERT INTO tasks(description) VALUES ($1)`, task.Description).Scan(&task.ID)
+	err := s.db.QueryRow(ctx, `INSERT INTO tasks(description) VALUES ($1) RETURNING id, description`, task.Description).Scan(&task.ID, &task.Description)
 	if err != nil {
 		return task, err
 	}
