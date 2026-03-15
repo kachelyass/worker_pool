@@ -1,4 +1,4 @@
-package database
+package postgre
 
 import (
 	"context"
@@ -16,7 +16,6 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	}
 
 	cfg.MaxConns = 20
-	cfg.MinConns = 2
 	cfg.MinConns = 5
 	cfg.MaxConnLifetime = 10 * time.Minute
 	cfg.MaxConnIdleTime = 10 * time.Minute

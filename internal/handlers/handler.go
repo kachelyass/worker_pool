@@ -1,17 +1,22 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
-	"worker_pool/internal/database"
-	"worker_pool/internal/models"
+	"worker_pool/internal/handlers/models"
 )
 
+type TaskStore interface {
+	GetAll(ctx context.Context) ([]models.Task, error)
+	GetByID(ctx context.Context, id int) (models.Task, error)
+	Create(ctx context.Context, task models.Task) (models.Task, error)
+}
 type TaskHandler struct {
-	store *database.TaskStore
+	store TaskStore
 }
 
-func NewTaskHandler(store *database.TaskStore) *TaskHandler {
+func NewTaskHandler(store TaskStore) *TaskHandler {
 	return &TaskHandler{store: store}
 }
 

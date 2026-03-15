@@ -1,10 +1,10 @@
-package database
+package postgre
 
 import (
 	"context"
 	"errors"
 	"log"
-	"worker_pool/internal/models"
+	"worker_pool/internal/handlers/models"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
