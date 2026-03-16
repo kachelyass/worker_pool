@@ -28,9 +28,10 @@ services:
     entrypoint: ["migrate"]
     command:
       - "-path=/migrations"
-      - "-database=postgres://user:pass@localhost:5432/db?sslmode=disable"
+      - "-database=postgres://user:pass@postgres:5432/db?sslmode=disable"
       - "up"
     restart: on-failure
 
 volumes:
   pg_data:
+    name: pg_data
