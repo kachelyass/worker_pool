@@ -11,5 +11,6 @@ func worker(task http.Request, input <-chan int, output chan<- int) { // при�
 		fmt.Println("worker", task, "Started", j)
 		time.Sleep(time.Second)
 		fmt.Println("worker", task, "finished job", j)
+		output <- j
 	}
 }
