@@ -6,19 +6,19 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"worker_pool/internal/database"
+	"worker_pool/internal/database/postgre"
 	"worker_pool/internal/handlers"
 )
 
 func main() {
 	ctx := context.Background()
-	db, err := database.Connect(ctx, "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	db, err := postgre.Connect(ctx, "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	store := database.NewTaskStore(db)
+	store := postgre.NewTaskStore(db)
 	taskHandler := handlers.NewTaskHandler(store)
 	mux := http.NewServeMux()
 
