@@ -43,7 +43,7 @@ func main() {
 				return
 			}
 			taskHandler.GetByID(w, r, id)
-		case http.MethodPut:
+		case http.MethodPost:
 
 			taskHandler.Create(w, r)
 		default:
