@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"worker_pool/internal/database/postgre"
 	"worker_pool/internal/handlers"
+	"worker_pool/internal/infrastructure/postgre"
 )
 
 func main() {
