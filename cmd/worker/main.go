@@ -21,19 +21,12 @@ func main() {
 	store := postgre.NewTaskStore(db)
 
 	ids, err := store.GetPendingIDs(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("pending tasks: %d", len(ids))
-	if len(ids) == 0 {
-		return
-	}
 
 	const numWorkers = 5
-	jobs := make(chan int, len(ids)) // буфер под все задачи
+	jobs := make(chan int, len(ids))
 
 	var wg sync.WaitGroup
-	wg.Add(len(ids)) // будем “Done” на каждую обработанную задачу
+	wg.Add(len(ids))
 
 	// старт воркеров
 	for w := 0; w < numWorkers; w++ {
@@ -44,7 +37,7 @@ func main() {
 	for _, id := range ids {
 		jobs <- id
 	}
-	close(jobs) // важно: чтобы воркеры вышли из range
+	close(jobs)
 
 	// ждём, пока все задачи будут обработаны
 	wg.Wait()
@@ -55,9 +48,8 @@ func worker(workerID int, jobs <-chan int, store *postgre.TaskStore, ctx context
 	for taskID := range jobs {
 		log.Printf("worker %d starting job %d", workerID, taskID)
 
-		time.Sleep(20 * time.Second)
+		time.Sleep(8 * time.Second)
 
-		// ВАЖНО: обновляем статус задачи по taskID
 		_, err := store.UpdateTaskStatus(ctx, taskID)
 		if err != nil {
 			log.Printf("worker %d error on job %d: %v", workerID, taskID, err)
