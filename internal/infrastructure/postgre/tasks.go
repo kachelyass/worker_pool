@@ -91,7 +91,7 @@ RETURNING id`, limit)
 	return ids, nil
 }
 
-func (s *TaskStore) UpdateTaskStatus(ctx context.Context, id int) (models.Task, error) {
+func (s *TaskStore) MarkDone(ctx context.Context, id int) (models.Task, error) {
 	var task models.Task
 	err := s.db.QueryRow(ctx, `UPDATE tasks SET status = 'done' WHERE id = $1 RETURNING id, description, status`, id).Scan(&task.ID, &task.Description, &task.Status)
 	if err != nil {
