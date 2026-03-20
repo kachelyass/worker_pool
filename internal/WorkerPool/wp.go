@@ -24,9 +24,14 @@ func NewJobHandler(store *postgre.TaskStore) *JobHandler {
 
 func (h *JobHandler) Producer(ctx context.Context, jobs chan<- JobTask, limit int) {
 	for {
-		ids, _ := h.store.ClaimNextIDs(ctx, limit)
+		ids, err := h.store.ClaimNextIDs(ctx, limit)
 		if len(ids) == 0 {
 			fmt.Printf("i go to sleep....ZZZzzzZZZzzz")
+			time.Sleep(time.Second * 5)
+			continue
+		}
+		if err != nil {
+			log.Printf("producer: ClaimNextIDs: %v", err)
 			time.Sleep(time.Second * 5)
 			continue
 		}

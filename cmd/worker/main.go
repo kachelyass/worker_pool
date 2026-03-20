@@ -29,7 +29,6 @@ func main() {
 		go handler.Worker(ctx, w, jobs)
 	}
 
-	for j := 1; j <= limit; j++ {
-		handler.Producer(ctx, jobs, j)
-	}
+	handler.Producer(ctx, jobs, limit)
+
 }

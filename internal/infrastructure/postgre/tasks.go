@@ -72,7 +72,7 @@ UPDATE tasks
 SET status = 'processing'
 FROM picked 
 WHERE tasks.id = picked.id
-RETURNING id`, limit)
+RETURNING tasks.id`, limit)
 	if err != nil {
 		return nil, err
 	}
