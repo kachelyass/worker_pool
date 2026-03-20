@@ -60,13 +60,23 @@ func (s *TaskStore) Create(ctx context.Context, task models.Task) (models.Task, 
 	return task, nil
 }
 
-func (s *TaskStore) GetPendingIDs(ctx context.Context) ([]int, error) {
-	rows, err := s.db.Query(ctx, `SELECT id FROM tasks WHERE status = 'pending'`)
+func (s *TaskStore) ClaimNextIDs(ctx context.Context, limit int) ([]int, error) {
+	rows, err := s.db.Query(ctx, `WITH picked AS (
+SELECT id 
+FROM tasks 
+WHERE status = 'pending'
+LIMIT $1
+FOR UPDATE SKIP LOCKED
+)
+UPDATE tasks 
+SET status = 'processing'
+FROM picked 
+WHERE tasks.id = picked.id
+RETURNING id`, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
 	var ids []int
 	for rows.Next() {
 		var id int
