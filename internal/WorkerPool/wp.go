@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 	"worker_pool/internal/infrastructure/postgre"
 )
@@ -71,3 +72,12 @@ func (h *JobHandler) Worker(ctx context.Context, id int, jobs <-chan JobTask) {
 		fmt.Printf("Worker %d finished processing task %d\n", id, j.ID)
 	}
 } // воркеры которые будут вызывать Process хз норм ли делать для такой таски такую вложенность
+
+type PoolManager struct {
+	mu      sync.Mutex
+	handler *JobHandler
+	jobs    chan JobTask
+	workers map[int]context.CancelFunc
+	nextID  int
+	wg      sync.WaitGroup
+}
