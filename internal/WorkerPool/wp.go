@@ -74,10 +74,10 @@ func (h *JobHandler) Worker(ctx context.Context, id int, jobs <-chan JobTask) {
 } // воркеры которые будут вызывать Process хз норм ли делать для такой таски такую вложенность
 
 type PoolManager struct {
-	mu      sync.Mutex
+	mu      sync.Mutex // идея в том, чтобы операции обавления воркеров и удаления не мешали друг другу
 	handler *JobHandler
 	jobs    chan JobTask
 	workers map[int]context.CancelFunc
-	nextID  int
-	wg      sync.WaitGroup
+	nextID  int            // чтобы присуждать следующим воркерам уникальный id
+	wg      sync.WaitGroup // чтобы дождаться выключения всех работающих воркеров до добавления новых или удаления старыъ
 }
