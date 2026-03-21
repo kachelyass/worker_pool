@@ -5,3 +5,7 @@ type Task struct {
 	Description string `json:"description"`
 	Status      string `json:"status"`
 }
+
+type ScaleRequest struct {
+	Count int `json:"count"`
+}
