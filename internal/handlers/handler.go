@@ -58,7 +58,6 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, created)
-
 }
 
 func writeJSON(w http.ResponseWriter, status int, data any) {

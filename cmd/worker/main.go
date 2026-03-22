@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
+
 	"worker_pool/internal/WorkerPool"
 	"worker_pool/internal/infrastructure/postgre"
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	db, err := postgre.Connect(ctx, "postgresql://user:pass@localhost:5432/db?sslmode=disable")
@@ -21,14 +23,21 @@ func main() {
 	store := postgre.NewTaskStore(db)
 	handler := WorkerPool.NewJobHandler(store)
 
-	limit := 10
+	workersCount := 10
+	batchSize := 10
 
-	jobs := make(chan WorkerPool.JobTask, limit)
+	jobs := make(chan WorkerPool.JobTask, batchSize)
 
-	for w := 1; w <= limit; w++ {
-		go handler.Worker(ctx, w, jobs)
+	var wg sync.WaitGroup
+
+	for w := 1; w <= workersCount; w++ {
+		wg.Add(1)
+		go handler.Worker(ctx, &wg, w, jobs)
 	}
 
-	handler.Producer(ctx, jobs, limit)
+	handler.Producer(ctx, jobs, batchSize)
 
+	wg.Wait()
+
+	log.Println("graceful shutdown complete")
 }
