@@ -17,11 +17,15 @@ type JobTask struct {
 }
 
 type JobHandler struct {
-	store *postgre.TaskStore
+	store       *postgre.TaskStore
+	taskTimeout time.Duration
 }
 
 func NewJobHandler(store *postgre.TaskStore) *JobHandler {
-	return &JobHandler{store: store}
+	return &JobHandler{
+		store:       store,
+		taskTimeout: 15 * time.Second,
+	}
 }
 
 func waitOrDone(ctx context.Context, d time.Duration) error {
@@ -40,25 +44,28 @@ func (h *JobHandler) Producer(ctx context.Context, jobs chan<- JobTask, batchSiz
 	defer close(jobs)
 
 	for {
+		// Перед новым походом в БД проверяем:
+		// не пора ли перестать брать НОВЫЕ задачи
 		select {
 		case <-ctx.Done():
-			log.Printf("producer stopped: %v", ctx.Err())
+			log.Printf("producer: stop taking new tasks: %v", ctx.Err())
 			return
 		default:
 		}
 
 		ids, err := h.store.ClaimNextIDs(ctx, batchSize)
-
 		if err != nil {
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
-				log.Printf("producer stopped by context: %v", ctx.Err())
+			if ctx.Err() != nil ||
+				errors.Is(err, context.Canceled) ||
+				errors.Is(err, context.DeadlineExceeded) {
+				log.Printf("producer: stopped by context: %v", ctx.Err())
 				return
 			}
 
 			log.Printf("producer: ClaimNextIDs error: %v", err)
 
 			if err := waitOrDone(ctx, 5*time.Second); err != nil {
-				log.Printf("producer wait interrupted: %v", err)
+				log.Printf("producer: stop during backoff: %v", err)
 				return
 			}
 			continue
@@ -68,20 +75,22 @@ func (h *JobHandler) Producer(ctx context.Context, jobs chan<- JobTask, batchSiz
 			log.Printf("producer: no tasks, sleeping...")
 
 			if err := waitOrDone(ctx, 5*time.Second); err != nil {
-				log.Printf("producer wait interrupted: %v", err)
+				log.Printf("producer: stop during idle wait: %v", err)
 				return
 			}
 			continue
 		}
 
 		for _, id := range ids {
-			select {
-			case <-ctx.Done():
-				log.Printf("producer stopped while sending jobs: %v", ctx.Err())
-				return
-			case jobs <- JobTask{ID: id}:
-				log.Printf("job %d sent to channel", id)
-			}
+			jobs <- JobTask{ID: id}
+			log.Printf("producer: job %d sent to channel", id)
+		}
+
+		select {
+		case <-ctx.Done():
+			log.Printf("producer: current batch sent, stop taking next tasks: %v", ctx.Err())
+			return
+		default:
 		}
 	}
 }
@@ -96,32 +105,31 @@ func (h *JobHandler) Process(ctx context.Context, task JobTask) {
 	log.Printf("marked task %d: %v", task.ID, res)
 }
 
-func (h *JobHandler) Worker(ctx context.Context, wg *sync.WaitGroup, id int, jobs <-chan JobTask) {
+func (h *JobHandler) doWork(ctx context.Context, task JobTask) error {
+	return waitOrDone(ctx, 3*time.Second)
+}
+
+func (h *JobHandler) Worker(wg *sync.WaitGroup, id int, jobs <-chan JobTask) {
 	defer wg.Done()
 
-	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("worker %d stopped: %v", id, ctx.Err())
-			return
+	for job := range jobs {
+		log.Printf("worker %d processing task %d", id, job.ID)
 
-		case j, ok := <-jobs:
-			if !ok {
-				log.Printf("worker %d: jobs channel closed, exiting", id)
-				return
-			}
+		taskCtx, cancel := context.WithTimeout(context.Background(), h.taskTimeout)
 
-			log.Printf("worker %d processing task %d", id, j.ID)
-
-			if err := waitOrDone(ctx, 3*time.Second); err != nil {
-				log.Printf("worker %d interrupted while processing task %d: %v", id, j.ID, err)
-				return
-			}
-
-			h.Process(ctx, j)
-			log.Printf("worker %d finished task %d", id, j.ID)
+		if err := h.doWork(taskCtx, job); err != nil {
+			log.Printf("worker %d: task %d failed during work: %v", id, job.ID, err)
+			cancel()
+			continue
 		}
+
+		h.Process(taskCtx, job)
+		cancel()
+
+		log.Printf("worker %d finished task %d", id, job.ID)
 	}
+
+	log.Printf("worker %d: jobs channel closed, exiting", id)
 }
 
 type PoolManager struct {

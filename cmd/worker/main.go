@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"worker_pool/internal/WorkerPool"
@@ -11,10 +14,13 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	intakeCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	db, err := postgre.Connect(ctx, "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	startupCtx, cancelStartup := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelStartup()
+
+	db, err := postgre.Connect(startupCtx, "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,10 +38,10 @@ func main() {
 
 	for w := 1; w <= workersCount; w++ {
 		wg.Add(1)
-		go handler.Worker(ctx, &wg, w, jobs)
+		go handler.Worker(&wg, w, jobs)
 	}
 
-	handler.Producer(ctx, jobs, batchSize)
+	handler.Producer(intakeCtx, jobs, batchSize)
 
 	wg.Wait()
 
