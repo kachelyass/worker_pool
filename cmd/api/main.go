@@ -65,7 +65,7 @@ func main() {
 	}
 
 	go func() {
-		log.Println("Listening on :8081")
+		log.Println("Listening on :8080")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
