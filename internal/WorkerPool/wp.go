@@ -170,7 +170,7 @@ func (pm *PoolManager) Count() int {
 	return len(pm.workers)
 }
 
-func (pm *PoolManager) AddWorker(n int) {
+func (pm *PoolManager) AddWorkers(n int) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
@@ -216,4 +216,21 @@ func (pm *PoolManager) RemoveWorkers(n int) {
 		cancel()
 		log.Printf("pool: worker %d stop requested", toStop[i])
 	}
+}
+
+func (pm *PoolManager) SetWorkers(target int) int {
+	if target < 1 {
+		target = 1
+	}
+
+	current := pm.Count()
+
+	switch {
+	case target > current:
+		pm.AddWorkers(target - current)
+	case target < current:
+		pm.RemoveWorkers(current - target)
+	}
+
+	return pm.Count()
 }
