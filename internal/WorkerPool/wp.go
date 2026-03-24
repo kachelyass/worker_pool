@@ -234,3 +234,7 @@ func (pm *PoolManager) SetWorkers(target int) int {
 
 	return pm.Count()
 }
+
+func (pm *PoolManager) Wait() {
+	pm.wg.Wait()
+}
