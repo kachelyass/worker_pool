@@ -168,3 +168,21 @@ func (pm *PoolManager) Count() int {
 	defer pm.mu.Unlock()
 	return len(pm.workers)
 }
+
+func (pm *PoolManager) AddWorker(n int) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	for i := 0; i < n; i++ {
+		workerID := pm.nextID
+		pm.nextID++
+
+		ctx, cancel := context.WithCancel(context.Background())
+		pm.workers[workerID] = cancel
+
+		pm.wg.Add(1)
+		go pm.handler.Worker(ctx, &pm.wg, workerID, pm.jobs)
+
+		log.Printf("pool: worker %d started", workerID)
+	}
+}
