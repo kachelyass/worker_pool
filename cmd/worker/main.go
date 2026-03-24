@@ -37,7 +37,6 @@ func main() {
 	pool := WorkerPool.NewPoolManager(handler, queueSize)
 	server := handlers.NewServer(pool)
 
-	// стартуем начальное количество воркеров
 	pool.AddWorkers(workersCount)
 
 	go handler.Producer(intakeCtx, pool.Jobs(), batchSize)
