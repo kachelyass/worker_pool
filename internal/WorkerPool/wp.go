@@ -162,3 +162,9 @@ func NewPoolManager(handler *JobHandler, queueSize int) *PoolManager {
 func (pm *PoolManager) Jobs() chan JobTask {
 	return pm.jobs
 }
+
+func (pm *PoolManager) Count() int {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+	return len(pm.workers)
+}
