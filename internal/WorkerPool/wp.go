@@ -150,3 +150,11 @@ type PoolManager struct {
 	nextID  int
 	wg      sync.WaitGroup
 }
+
+func NewPoolManager(handler *JobHandler, queueSize int) *PoolManager {
+	return &PoolManager{
+		handler: handler,
+		jobs:    make(chan JobTask, queueSize),
+		workers: make(map[int]context.CancelFunc),
+	}
+}
