@@ -6,6 +6,6 @@ type Task struct {
 	Status      string `json:"status"`
 }
 
-type setWorkersRequest struct {
+type SetWorkersRequest struct {
 	Count int `json:"count"`
 }
