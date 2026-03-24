@@ -65,6 +65,10 @@ type Server struct {
 	pool *WorkerPool.PoolManager
 }
 
+func NewServer(server *WorkerPool.PoolManager) *Server {
+	return &Server{pool: server}
+}
+
 func (s *Server) GetWorkers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
