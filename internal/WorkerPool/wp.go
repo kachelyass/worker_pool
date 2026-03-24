@@ -158,3 +158,7 @@ func NewPoolManager(handler *JobHandler, queueSize int) *PoolManager {
 		workers: make(map[int]context.CancelFunc),
 	}
 }
+
+func (pm *PoolManager) Jobs() chan JobTask {
+	return pm.jobs
+}
