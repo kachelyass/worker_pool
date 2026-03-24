@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -184,5 +185,35 @@ func (pm *PoolManager) AddWorker(n int) {
 		go pm.handler.Worker(ctx, &pm.wg, workerID, pm.jobs)
 
 		log.Printf("pool: worker %d started", workerID)
+	}
+}
+
+func (pm *PoolManager) RemoveWorkers(n int) {
+	pm.mu.Lock()
+
+	if n > len(pm.workers) {
+		n = len(pm.workers)
+	}
+
+	ids := make([]int, 0, len(pm.workers))
+	for id := range pm.workers {
+		ids = append(ids, id)
+	}
+
+	sort.Sort(sort.Reverse(sort.IntSlice(ids)))
+
+	toStop := ids[:n]
+	cancels := make([]context.CancelFunc, 0, n)
+
+	for _, id := range toStop {
+		cancels = append(cancels, pm.workers[id])
+		delete(pm.workers, id)
+	}
+
+	pm.mu.Unlock()
+
+	for i, cancel := range cancels {
+		cancel()
+		log.Printf("pool: worker %d stop requested", toStop[i])
 	}
 }
