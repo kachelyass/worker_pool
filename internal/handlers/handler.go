@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"worker_pool/internal/WorkerPool"
 	"worker_pool/internal/handlers/models"
 )
 
@@ -58,6 +59,19 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, created)
+}
+
+type Server struct {
+	pool *WorkerPool.PoolManager
+}
+
+func (s *Server) GetWorkers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"status":  "ok",
+		"workers": s.pool.Count(),
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, data any) {
