@@ -15,11 +15,9 @@ import (
 )
 
 func main() {
-	// Контекст для завершения по сигналу
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Подключение к БД
 	db, err := postgre.Connect(ctx, "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
@@ -31,7 +29,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Роуты нужно регистрировать ДО запуска сервера
 	mux.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
