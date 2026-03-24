@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
+	"worker_pool/internal/handlers"
 
 	"worker_pool/internal/WorkerPool"
 	"worker_pool/internal/infrastructure/postgre"
@@ -31,19 +32,52 @@ func main() {
 
 	workersCount := 10
 	batchSize := 10
+	queueSize := 100
 
-	jobs := make(chan WorkerPool.JobTask, batchSize)
+	pool := WorkerPool.NewPoolManager(handler, queueSize)
+	server := handlers.NewServer(pool)
 
-	var wg sync.WaitGroup
+	// стартуем начальное количество воркеров
+	pool.AddWorkers(workersCount)
 
-	for w := 1; w <= workersCount; w++ {
-		wg.Add(1)
-		go handler.Worker(&wg, w, jobs)
+	go handler.Producer(intakeCtx, pool.Jobs(), batchSize)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/workers", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			server.GetWorkers(w, r)
+		case http.MethodPatch:
+			server.SetWorkers(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	httpServer := &http.Server{
+		Addr:              ":8080",
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	handler.Producer(intakeCtx, jobs, batchSize)
+	go func() {
+		log.Println("http server started on :8080")
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("http server error: %v", err)
+		}
+	}()
 
-	wg.Wait()
+	<-intakeCtx.Done()
+	log.Println("shutdown signal received")
+
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelShutdown()
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Printf("http server shutdown error: %v", err)
+	}
+
+	pool.Wait()
 
 	log.Println("graceful shutdown complete")
 }
