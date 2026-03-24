@@ -109,27 +109,37 @@ func (h *JobHandler) doWork(ctx context.Context, task JobTask) error {
 	return waitOrDone(ctx, 3*time.Second)
 }
 
-func (h *JobHandler) Worker(wg *sync.WaitGroup, id int, jobs <-chan JobTask) {
+func (h *JobHandler) Worker(ctx context.Context, wg *sync.WaitGroup, id int, jobs <-chan JobTask) {
 	defer wg.Done()
 
-	for job := range jobs {
-		log.Printf("worker %d processing task %d", id, job.ID)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("worker %d: stop requested", id)
+			return
 
-		taskCtx, cancel := context.WithTimeout(context.Background(), h.taskTimeout)
+		case job, ok := <-jobs:
+			if !ok {
+				log.Printf("worker %d: jobs channel closed, exiting", id)
+				return
+			}
 
-		if err := h.doWork(taskCtx, job); err != nil {
-			log.Printf("worker %d: task %d failed during work: %v", id, job.ID, err)
+			log.Printf("worker %d processing task %d", id, job.ID)
+
+			taskCtx, cancel := context.WithTimeout(context.Background(), h.taskTimeout)
+
+			if err := h.doWork(taskCtx, job); err != nil {
+				log.Printf("worker %d: task %d failed during work: %v", id, job.ID, err)
+				cancel()
+				continue
+			}
+
+			h.Process(taskCtx, job)
 			cancel()
-			continue
+
+			log.Printf("worker %d finished task %d", id, job.ID)
 		}
-
-		h.Process(taskCtx, job)
-		cancel()
-
-		log.Printf("worker %d finished task %d", id, job.ID)
 	}
-
-	log.Printf("worker %d: jobs channel closed, exiting", id)
 }
 
 type PoolManager struct {
