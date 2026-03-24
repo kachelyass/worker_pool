@@ -54,7 +54,7 @@ func main() {
 	})
 
 	httpServer := &http.Server{
-		Addr:              ":8080",
+		Addr:              ":8081",
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
