@@ -4,14 +4,22 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
+
 	"worker_pool/internal/handlers"
 	"worker_pool/internal/infrastructure/postgre"
 )
 
 func main() {
-	ctx := context.Background()
+	// Контекст для завершения по сигналу
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// Подключение к БД
 	db, err := postgre.Connect(ctx, "postgresql://user:pass@localhost:5432/db?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
@@ -20,8 +28,10 @@ func main() {
 
 	store := postgre.NewTaskStore(db)
 	taskHandler := handlers.NewTaskHandler(store)
+
 	mux := http.NewServeMux()
 
+	// Роуты нужно регистрировать ДО запуска сервера
 	mux.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -43,14 +53,36 @@ func main() {
 				return
 			}
 			taskHandler.GetByID(w, r, id)
-		case http.MethodPost:
-
-			taskHandler.Create(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
 
-	log.Println("Listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	server := &http.Server{
+		Addr:              ":8080",
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		log.Println("Listening on :8081")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutdown signal received")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("graceful shutdown failed: %v", err)
+		if err := server.Close(); err != nil {
+			log.Printf("server close error: %v", err)
+		}
+	}
+
+	log.Println("server stopped gracefully")
 }
