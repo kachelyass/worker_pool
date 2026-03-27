@@ -56,8 +56,21 @@ services:
       - "9644:9644"
     volumes:
       - redpanda_data:/var/lib/redpanda/data
-    
 
+  topic-init:
+    image: docker.redpanda.com/redpandadata/redpanda:v25.3.11
+    depends_on:
+      - redpanda
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        until rpk cluster info -X brokers=redpanda:9092; do
+          echo "waiting for redpanda..."
+          sleep 2
+        done
+        rpk topic create jobs -p 3 -r 1 --if-not-exists -X brokers=redpanda:9092
+        echo "topics created"
 
 volumes:
   pg_data:
