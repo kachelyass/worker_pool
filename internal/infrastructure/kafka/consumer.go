@@ -18,7 +18,13 @@ type Consumer struct {
 	handler MessageHandler
 }
 
-func NewConsumer(brokers []string, groupID string, clientID string, topics []string, handler MessageHandler) (*Consumer, error) {
+func NewConsumer(
+	brokers []string,
+	groupID string,
+	clientID string,
+	topics []string,
+	handler MessageHandler,
+) (*Consumer, error) {
 	cfg := sarama.NewConfig()
 	cfg.ClientID = clientID
 	cfg.Consumer.Offsets.Initial = sarama.OffsetOldest
