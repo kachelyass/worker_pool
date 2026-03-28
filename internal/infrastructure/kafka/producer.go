@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"encoding/json"
+	"fmt"
 	"worker_pool/internal/handlers/models"
 
 	"github.com/IBM/sarama"
@@ -42,7 +43,11 @@ func (p *Producer) Publish(key string, value []byte) error {
 	if key != "" {
 		msg.Key = sarama.StringEncoder(key)
 	}
-	_, _, err := p.producer.SendMessage(msg)
+	partition, offset, err := p.producer.SendMessage(msg)
+	if err != nil {
+		return fmt.Errorf("error sending message to kafka: %w", err)
+	}
+	fmt.Printf("message sent to partition %d at offset %d\n", partition, offset)
 	return err
 }
 
@@ -56,4 +61,5 @@ func (p *Producer) PublishCreateTask(description string) error {
 		return err
 	}
 	return p.Publish("create_task", data)
+
 }
