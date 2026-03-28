@@ -9,3 +9,9 @@ type Task struct {
 type SetWorkersRequest struct {
 	Count int `json:"count"`
 }
+
+type JobMessage struct {
+	ID     int    `json:"id"`
+	Title  string `json:"title"`
+	Status string `json:"status"`
+}
