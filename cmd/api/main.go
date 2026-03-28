@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"worker_pool/internal/infrastructure/kafka"
 
 	"worker_pool/internal/handlers"
 	"worker_pool/internal/infrastructure/postgre"
@@ -25,7 +26,17 @@ func main() {
 	defer db.Close()
 
 	store := postgre.NewTaskStore(db)
-	taskHandler := handlers.NewTaskHandler(store)
+
+	producer, err := kafka.NewProducer(
+		[]string{"localhost:19092"},
+		"api",
+		"jobs")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer producer.Close()
+
+	taskHandler := handlers.NewTaskHandler(store, producer)
 
 	mux := http.NewServeMux()
 

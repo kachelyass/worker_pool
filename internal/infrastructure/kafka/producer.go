@@ -1,6 +1,11 @@
 package kafka
 
-import "github.com/IBM/sarama"
+import (
+	"encoding/json"
+	"worker_pool/internal/handlers/models"
+
+	"github.com/IBM/sarama"
+)
 
 type Producer struct {
 	topic    string
@@ -39,4 +44,16 @@ func (p *Producer) Publish(key string, value []byte) error {
 	}
 	_, _, err := p.producer.SendMessage(msg)
 	return err
+}
+
+func (p *Producer) PublishCreateTask(description string) error {
+	msg := models.CreateTaskMessage{
+		Description: description,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return p.Publish("create_task", data)
 }
