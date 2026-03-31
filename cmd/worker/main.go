@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"worker_pool/internal/app/workerpool"
 	"worker_pool/internal/handlers"
 
-	"worker_pool/internal/WorkerPool"
 	"worker_pool/internal/infrastructure/postgre"
 )
 
@@ -28,13 +28,13 @@ func main() {
 	defer db.Close()
 
 	store := postgre.NewTaskStore(db)
-	handler := WorkerPool.NewJobHandler(store)
+	handler := workerpool.NewJobHandler(store)
 
 	workersCount := 10
 	batchSize := 10
 	queueSize := 100
 
-	pool := WorkerPool.NewPoolManager(handler, queueSize)
+	pool := workerpool.NewPoolManager(handler, queueSize)
 	server := handlers.NewServer(pool)
 
 	pool.AddWorkers(workersCount)
