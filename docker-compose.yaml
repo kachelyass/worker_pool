@@ -72,7 +72,22 @@ services:
         rpk topic create jobs -p 3 -r 1 --if-not-exists -X brokers=redpanda:9092
         echo "topics created"
 
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./internal/config/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+
 volumes:
   pg_data:
     name: pg_data
   redpanda_data:
+  prometheus_data:
+
