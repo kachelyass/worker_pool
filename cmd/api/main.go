@@ -9,28 +9,30 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"worker_pool/internal/infrastructure/kafka"
-
 	"worker_pool/internal/handlers"
+	"worker_pool/internal/infrastructure/kafka"
 	"worker_pool/internal/infrastructure/postgre"
+	"worker_pool/pkg/metrics"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	db, err := postgre.Connect(ctx, "postgresql://user:pass@localhost:5432/db?sslmode=disable")
+	db, err := postgre.Connect(ctx, "postgresql://user:pass@postgres:5432/db?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
 	store := postgre.NewTaskStore(db)
 
 	producer, err := kafka.NewProducer(
-		[]string{"localhost:19092"},
+		[]string{"redpanda:9092"},
 		"api",
 		"jobs")
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,7 +42,9 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
+	metrics.Init()
+
+	mux.Handle("/tasks", metrics.Middleware("/tasks", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			taskHandler.GetALl(w, r)
@@ -49,9 +53,9 @@ func main() {
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	})))
 
-	mux.HandleFunc("/tasks/", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/tasks/", metrics.Middleware("/tasks/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			idStr := strings.TrimPrefix(r.URL.Path, "/tasks/")
@@ -64,7 +68,9 @@ func main() {
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	})))
+
+	mux.Handle("/metrics", promhttp.Handler())
 
 	server := &http.Server{
 		Addr:              ":8080",

@@ -24,7 +24,7 @@ func main() {
 	handler := kafka.NewMessageCreateHandler(store)
 
 	consumer, err := kafka.NewConsumer(
-		[]string{"localhost:19092"},
+		[]string{"redpanda:19092"},
 		"task-create-db-writer",
 		"task-create-db-writer",
 		[]string{"jobs"},

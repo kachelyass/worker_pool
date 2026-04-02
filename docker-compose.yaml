@@ -14,8 +14,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U user -d db"]
       interval: 2s
       timeout: 5s
-      retries: 2
-
+      retries: 10
 
   migrate:
     image: migrate/migrate:v4.16.2
@@ -72,9 +71,64 @@ services:
         rpk topic create jobs -p 3 -r 1 --if-not-exists -X brokers=redpanda:9092
         echo "topics created"
 
+  api:
+    build:
+      context: .
+      dockerfile: ./internal/config/Dockerfile
+    container_name: api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+      topic-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    command: ["/bin/api"]
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  consumer:
+    build:
+      context: .
+      dockerfile: ./internal/config/Dockerfile
+    container_name: consumer
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+      topic-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    command: ["/bin/consumer"]
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: ./internal/config/Dockerfile
+    container_name: worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+      topic-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    command: ["/bin/worker"]
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: prometheus
+    depends_on:
+      - api
     ports:
       - "9090:9090"
     volumes:
@@ -90,4 +144,3 @@ volumes:
     name: pg_data
   redpanda_data:
   prometheus_data:
-
