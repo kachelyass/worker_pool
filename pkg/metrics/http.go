@@ -34,12 +34,6 @@ var (
 	)
 )
 
-func Init() {
-	prometheus.MustRegister(HTTPRequestsTotal)
-	prometheus.MustRegister(HTTPRequestDuration)
-	prometheus.MustRegister(HTTPInFlight)
-}
-
 type statusRecorder struct {
 	http.ResponseWriter
 	statusCode int

@@ -60,6 +60,7 @@ func main() {
 		case http.MethodGet:
 			idStr := strings.TrimPrefix(r.URL.Path, "/tasks/")
 			id, err := strconv.Atoi(idStr)
+			log.Println("path:", r.URL.Path, idStr, err)
 			if err != nil {
 				http.Error(w, "Invalid task ID", http.StatusBadRequest)
 				return

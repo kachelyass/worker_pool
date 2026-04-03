@@ -44,6 +44,7 @@ func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request, id int) {
 	task, err := h.store.GetByID(r.Context(), id)
 	if err != nil {
 		writerError(w, http.StatusInternalServerError, "Failed to get task")
+		return
 	}
 	writeJSON(w, http.StatusOK, task)
 }

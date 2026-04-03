@@ -42,7 +42,7 @@ func (s *TaskStore) GetAll(ctx context.Context) ([]models.Task, error) {
 
 func (s *TaskStore) GetByID(ctx context.Context, id int) (models.Task, error) {
 	var task models.Task
-	err := s.db.QueryRow(ctx, `SELECT * FROM tasks WHERE id = $1 `, id).Scan(&task.ID, &task.Description)
+	err := s.db.QueryRow(ctx, `SELECT * FROM tasks WHERE id = $1 `, id).Scan(&task.ID, &task.Description, &task.Status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return task, nil
 	}
