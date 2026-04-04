@@ -15,4 +15,11 @@ func Init() {
 	prometheus.MustRegister(KafkaConsumeErrorsTotal)
 	prometheus.MustRegister(KafkaConsumeDuration)
 	prometheus.MustRegister(KafkaConsumerRebalancesTotal)
+
+	prometheus.MustRegister(DBQueryTotal)
+	prometheus.MustRegister(DBQueryDuration)
+	prometheus.MustRegister(DBQueryErrorsTotal)
+	prometheus.MustRegister(DBPoolAcquiredConnections)
+	prometheus.MustRegister(DBPoolIdleConnections)
+	prometheus.MustRegister(DBPoolTotalConnections)
 }

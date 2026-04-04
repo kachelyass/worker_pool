@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"worker_pool/pkg/metrics"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -25,6 +26,23 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
+
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				stat := pool.Stat()
+				metrics.DBPoolAcquiredConnections.Set(float64(stat.AcquiredConns()))
+				metrics.DBPoolIdleConnections.Set(float64(stat.IdleConns()))
+				metrics.DBPoolTotalConnections.Set(float64(stat.TotalConns()))
+			}
+		}
+	}()
 
 	return pool, nil
 }
