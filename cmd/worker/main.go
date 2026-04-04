@@ -10,8 +10,11 @@ import (
 	"time"
 	"worker_pool/internal/app/workerpool"
 	"worker_pool/internal/handlers"
+	"worker_pool/pkg/metrics"
 
 	"worker_pool/internal/infrastructure/postgre"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -26,6 +29,8 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+	
+	metrics.Init()
 
 	store := postgre.NewTaskStore(db)
 	handler := workerpool.NewJobHandler(store)
@@ -52,6 +57,8 @@ func main() {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	mux.Handle("/metrics", promhttp.Handler())
 
 	httpServer := &http.Server{
 		Addr:              ":8081",

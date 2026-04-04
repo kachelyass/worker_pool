@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 	"worker_pool/internal/infrastructure/postgre"
+	"worker_pool/pkg/metrics"
 )
 
 type JobTask struct {
@@ -80,6 +81,8 @@ func (h *JobHandler) Producer(ctx context.Context, jobs chan<- JobTask, batchSiz
 
 		for _, id := range ids {
 			jobs <- JobTask{ID: id}
+			metrics.WorkerPoolJobsEnqueuedTotal.Inc()
+			metrics.WorkerPoolQueueSize.Set(float64(len(jobs)))
 			log.Printf("producer: job %d sent to channel", id)
 		}
 
@@ -121,11 +124,19 @@ func (h *JobHandler) Worker(ctx context.Context, wg *sync.WaitGroup, id int, job
 				return
 			}
 
+			metrics.WorkerPoolQueueSize.Set(float64(len(jobs)))
+			metrics.WorkerPoolJobsStartedTotal.Inc()
+
+			start := time.Now()
+
 			log.Printf("worker %d processing task %d", id, job.ID)
 
 			taskCtx, cancel := context.WithTimeout(context.Background(), h.taskTimeout)
 
 			if err := h.doWork(taskCtx, job); err != nil {
+				metrics.WorkerPoolJobsFailedTotal.Inc()
+				metrics.WorkerPoolJobDuration.Observe(time.Since(start).Seconds())
+
 				log.Printf("worker %d: task %d failed during work: %v", id, job.ID, err)
 				cancel()
 				continue
@@ -133,6 +144,10 @@ func (h *JobHandler) Worker(ctx context.Context, wg *sync.WaitGroup, id int, job
 
 			h.Process(taskCtx, job)
 			cancel()
+
+			metrics.WorkerPoolJobsCompletedTotal.Inc()
+			metrics.WorkerPoolJobDuration.Observe(time.Since(start).Seconds())
+			metrics.WorkerPoolQueueSize.Set(float64(len(jobs)))
 
 			log.Printf("worker %d finished task %d", id, job.ID)
 		}

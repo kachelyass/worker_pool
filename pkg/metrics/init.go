@@ -22,4 +22,12 @@ func Init() {
 	prometheus.MustRegister(DBPoolAcquiredConnections)
 	prometheus.MustRegister(DBPoolIdleConnections)
 	prometheus.MustRegister(DBPoolTotalConnections)
+
+	prometheus.MustRegister(WorkerPoolWorkers)
+	prometheus.MustRegister(WorkerPoolQueueSize)
+	prometheus.MustRegister(WorkerPoolJobsEnqueuedTotal)
+	prometheus.MustRegister(WorkerPoolJobsStartedTotal)
+	prometheus.MustRegister(WorkerPoolJobsCompletedTotal)
+	prometheus.MustRegister(WorkerPoolJobsFailedTotal)
+	prometheus.MustRegister(WorkerPoolJobDuration)
 }

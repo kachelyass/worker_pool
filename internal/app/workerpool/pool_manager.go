@@ -5,6 +5,7 @@ import (
 	"log"
 	"sort"
 	"sync"
+	"worker_pool/pkg/metrics"
 )
 
 type PoolManager struct {
@@ -17,11 +18,14 @@ type PoolManager struct {
 }
 
 func NewPoolManager(handler *JobHandler, queueSize int) *PoolManager {
-	return &PoolManager{
+	pm := &PoolManager{
 		handler: handler,
 		jobs:    make(chan JobTask, queueSize),
 		workers: make(map[int]context.CancelFunc),
 	}
+	metrics.WorkerPoolQueueSize.Set(0)
+	metrics.WorkerPoolWorkers.Set(0)
+	return pm
 }
 
 func (pm *PoolManager) Jobs() chan JobTask {
@@ -50,6 +54,8 @@ func (pm *PoolManager) AddWorkers(n int) {
 
 		log.Printf("pool: worker %d started", workerID)
 	}
+
+	metrics.WorkerPoolWorkers.Set(float64(len(pm.workers)))
 }
 
 func (pm *PoolManager) RemoveWorkers(n int) {
@@ -74,12 +80,15 @@ func (pm *PoolManager) RemoveWorkers(n int) {
 		delete(pm.workers, id)
 	}
 
+	currentWorkers := len(pm.workers)
 	pm.mu.Unlock()
 
 	for i, cancel := range cancels {
 		cancel()
 		log.Printf("pool: worker %d stop requested", toStop[i])
 	}
+
+	metrics.WorkerPoolWorkers.Set(float64(currentWorkers))
 }
 
 func (pm *PoolManager) SetWorkers(target int) int {
