@@ -9,10 +9,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"worker_pool/internal/handlers"
+	"worker_pool/internal/app/handlers"
 	"worker_pool/internal/infrastructure/kafka"
 	"worker_pool/internal/infrastructure/postgre"
 	"worker_pool/pkg/metrics"
+	"worker_pool/pkg/metrics/httpm"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -26,13 +27,14 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+
 	store := postgre.NewTaskStore(db)
 
 	producer, err := kafka.NewProducer(
 		[]string{"redpanda:9092"},
 		"api",
-		"jobs")
-
+		"jobs",
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,11 +42,11 @@ func main() {
 
 	taskHandler := handlers.NewTaskHandler(store, producer)
 
-	mux := http.NewServeMux()
-
 	metrics.Init()
 
-	mux.Handle("/tasks", metrics.Middleware("/tasks", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router := httpm.NewRouter()
+
+	router.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			taskHandler.GetALl(w, r)
@@ -53,14 +55,13 @@ func main() {
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})))
+	})
 
-	mux.Handle("/tasks/", metrics.Middleware("/tasks/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/tasks/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			idStr := strings.TrimPrefix(r.URL.Path, "/tasks/")
 			id, err := strconv.Atoi(idStr)
-			log.Println("path:", r.URL.Path, idStr, err)
 			if err != nil {
 				http.Error(w, "Invalid task ID", http.StatusBadRequest)
 				return
@@ -69,13 +70,13 @@ func main() {
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})))
+	})
 
-	mux.Handle("/metrics", promhttp.Handler())
+	router.RawHandle("/metrics", promhttp.Handler())
 
 	server := &http.Server{
 		Addr:              ":8080",
-		Handler:           mux,
+		Handler:           router.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -87,7 +88,6 @@ func main() {
 	}()
 
 	<-ctx.Done()
-	log.Println("shutdown signal received")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -98,6 +98,4 @@ func main() {
 			log.Printf("server close error: %v", err)
 		}
 	}
-
-	log.Println("server stopped gracefully")
 }

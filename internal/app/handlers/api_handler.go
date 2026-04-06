@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"worker_pool/internal/handlers/models"
+	"worker_pool/internal/app/handlers/models"
 )
 
 type TaskStore interface {

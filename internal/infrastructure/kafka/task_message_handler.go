@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"worker_pool/internal/handlers/models"
+	"worker_pool/internal/app/handlers/models"
 )
 
 type MessageStore interface {

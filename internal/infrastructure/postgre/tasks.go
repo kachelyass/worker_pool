@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log"
 	"time"
-	"worker_pool/internal/handlers/models"
+	"worker_pool/internal/app/handlers/models"
 	"worker_pool/pkg/metrics"
 
 	"github.com/jackc/pgx/v5"

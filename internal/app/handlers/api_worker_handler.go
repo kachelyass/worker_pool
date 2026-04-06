@@ -3,8 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"worker_pool/internal/app/handlers/models"
 	"worker_pool/internal/app/workerpool"
-	"worker_pool/internal/handlers/models"
 )
 
 type Server struct {

@@ -143,8 +143,20 @@ services:
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
 
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   pg_data:
     name: pg_data
   redpanda_data:
   prometheus_data:
+  grafana_data:

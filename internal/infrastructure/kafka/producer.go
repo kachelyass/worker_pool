@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-	"worker_pool/internal/handlers/models"
+	"worker_pool/internal/app/handlers/models"
 	"worker_pool/pkg/metrics"
 
 	"github.com/IBM/sarama"

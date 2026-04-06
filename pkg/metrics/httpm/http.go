@@ -1,4 +1,4 @@
-package metrics
+package httpm
 
 import (
 	"net/http"
@@ -59,9 +59,9 @@ func Middleware(route string, next http.Handler) http.Handler {
 		next.ServeHTTP(rec, r)
 
 		status := strconv.Itoa(rec.statusCode)
-		duration := time.Since(start).Seconds()
 
 		HTTPRequestsTotal.WithLabelValues(r.Method, route, status).Inc()
-		HTTPRequestDuration.WithLabelValues(r.Method, route, status).Observe(duration)
+		HTTPRequestDuration.WithLabelValues(r.Method, route, status).
+			Observe(time.Since(start).Seconds())
 	})
 }
