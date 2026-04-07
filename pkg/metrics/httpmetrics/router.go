@@ -1,4 +1,4 @@
-package httpm
+package httpmetrics
 
 import (
 	"net/http"

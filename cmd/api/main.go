@@ -12,7 +12,8 @@ import (
 	"worker_pool/internal/app/handlers"
 	"worker_pool/internal/infrastructure/kafka"
 	"worker_pool/internal/infrastructure/postgre"
-	"worker_pool/pkg/metrics/httpm"
+	"worker_pool/pkg/metrics/httpmetrics"
+	"worker_pool/pkg/metrics/postgresmetrics"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -41,9 +42,10 @@ func main() {
 
 	taskHandler := handlers.NewTaskHandler(store, producer)
 
-	httpm.Init()
+	httpmetrics.Init()
+	postgresmetrics.Init()
 
-	router := httpm.NewRouter()
+	router := httpmetrics.NewRouter()
 
 	router.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 	"worker_pool/internal/app/handlers/models"
-	"worker_pool/pkg/metrics"
 
 	"github.com/IBM/sarama"
 )
@@ -41,7 +40,7 @@ func (p *Producer) Close() error {
 func (p *Producer) Publish(key string, value []byte) error {
 	start := time.Now()
 	defer func() {
-		metrics.KafkaProduceDuration.WithLabelValues(p.topic).Observe(time.Since(start).Seconds())
+		kafkam.KafkaProduceDuration.WithLabelValues(p.topic).Observe(time.Since(start).Seconds())
 	}()
 	msg := &sarama.ProducerMessage{
 		Topic: p.topic,
@@ -52,12 +51,12 @@ func (p *Producer) Publish(key string, value []byte) error {
 	}
 	partition, offset, err := p.producer.SendMessage(msg)
 	if err != nil {
-		metrics.KafkaProduceErrorsTotal.WithLabelValues(p.topic).Inc()
-		metrics.KafkaProduceDuration.WithLabelValues(p.topic).Observe(time.Since(start).Seconds())
+		kafkam.KafkaProduceErrorsTotal.WithLabelValues(p.topic).Inc()
+		kafkam.KafkaProduceDuration.WithLabelValues(p.topic).Observe(time.Since(start).Seconds())
 		return fmt.Errorf("error sending message to kafka: %w", err)
 	}
-	metrics.KafkaProduceTotal.WithLabelValues(p.topic).Inc()
-	metrics.KafkaProduceDuration.WithLabelValues(p.topic).Observe(time.Since(start).Seconds())
+	kafkam.KafkaProduceTotal.WithLabelValues(p.topic).Inc()
+	kafkam.KafkaProduceDuration.WithLabelValues(p.topic).Observe(time.Since(start).Seconds())
 	fmt.Printf("message sent to partition %d at offset %d\n", partition, offset)
 	return err
 }

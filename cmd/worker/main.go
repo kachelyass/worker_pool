@@ -10,8 +10,6 @@ import (
 	"time"
 	"worker_pool/internal/app/handlers"
 	"worker_pool/internal/app/workerpool"
-	"worker_pool/pkg/metrics"
-
 	"worker_pool/internal/infrastructure/postgre"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -29,8 +27,6 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	metrics.Init()
 
 	store := postgre.NewTaskStore(db)
 	handler := workerpool.NewJobHandler(store)

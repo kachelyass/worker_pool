@@ -1,4 +1,4 @@
-package httpm
+package httpmetrics
 
 import "github.com/prometheus/client_golang/prometheus"
 

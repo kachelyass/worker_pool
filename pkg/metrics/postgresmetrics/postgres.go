@@ -1,4 +1,4 @@
-package metrics
+package postgresmetrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
@@ -8,15 +8,15 @@ var (
 			Name: "db_query_total",
 			Help: "Total number of database queries.",
 		},
-		[]string{"operation"},
+		[]string{"query_type"},
 	)
 
 	DBQueryErrorsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "db_query_errors_total",
-			Help: "Total number of database query errors.",
+			Help: "Total number of failed database queries.",
 		},
-		[]string{"operation"},
+		[]string{"query_type"},
 	)
 
 	DBQueryDuration = prometheus.NewHistogramVec(
@@ -25,7 +25,7 @@ var (
 			Help:    "Database query duration in seconds.",
 			Buckets: prometheus.DefBuckets,
 		},
-		[]string{"operation"},
+		[]string{"query_type"},
 	)
 
 	DBPoolAcquiredConnections = prometheus.NewGauge(

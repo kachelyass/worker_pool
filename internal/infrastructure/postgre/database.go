@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"worker_pool/pkg/metrics"
+	"worker_pool/pkg/metrics/postgresmetrics"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -13,7 +13,7 @@ import (
 func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("Parse database url: %w", err)
+		return nil, fmt.Errorf("parse database url: %w", err)
 	}
 
 	cfg.MaxConns = 20
@@ -22,9 +22,10 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	cfg.MaxConnIdleTime = 10 * time.Minute
 	cfg.HealthCheckPeriod = 30 * time.Second
 
+	cfg.ConnConfig.Tracer = postgresmetrics.NewMetricsTracer()
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("ping db: %w", err)
+		return nil, fmt.Errorf("create db pool: %w", err)
 	}
 
 	go func() {
@@ -37,9 +38,9 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 				return
 			case <-ticker.C:
 				stat := pool.Stat()
-				metrics.DBPoolAcquiredConnections.Set(float64(stat.AcquiredConns()))
-				metrics.DBPoolIdleConnections.Set(float64(stat.IdleConns()))
-				metrics.DBPoolTotalConnections.Set(float64(stat.TotalConns()))
+				postgresmetrics.DBPoolAcquiredConnections.Set(float64(stat.AcquiredConns()))
+				postgresmetrics.DBPoolIdleConnections.Set(float64(stat.IdleConns()))
+				postgresmetrics.DBPoolTotalConnections.Set(float64(stat.TotalConns()))
 			}
 		}
 	}()

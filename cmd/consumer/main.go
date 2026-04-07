@@ -7,8 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"worker_pool/pkg/metrics"
-
 	"worker_pool/internal/infrastructure/kafka"
 	"worker_pool/internal/infrastructure/postgre"
 
@@ -24,8 +22,6 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	metrics.Init()
 
 	store := postgre.NewTaskStore(db)
 	handler := kafka.NewMessageCreateHandler(store)
