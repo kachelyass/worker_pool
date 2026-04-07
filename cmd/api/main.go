@@ -12,7 +12,6 @@ import (
 	"worker_pool/internal/app/handlers"
 	"worker_pool/internal/infrastructure/kafka"
 	"worker_pool/internal/infrastructure/postgre"
-	"worker_pool/pkg/metrics"
 	"worker_pool/pkg/metrics/httpm"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -42,7 +41,7 @@ func main() {
 
 	taskHandler := handlers.NewTaskHandler(store, producer)
 
-	metrics.Init()
+	httpm.Init()
 
 	router := httpm.NewRouter()
 
