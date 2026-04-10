@@ -3,22 +3,22 @@ services:
     image: postgres:16
     container_name: tasks-postgres
     environment:
-      POSTGRES_DB: db
+      POSTGRES_DB: tasks
       POSTGRES_USER: user
       POSTGRES_PASSWORD: "pass"
     ports:
       - "5432:5432"
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data_tasks:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d db"]
+      test: ["CMD-SHELL", "pg_isready -U user -d tasks"]
       interval: 2s
       timeout: 5s
       retries: 10
 
-  migrate:
+  migrate-tasks:
     image: migrate/migrate:v4.16.2
-    container_name: migrate
+    container_name: migrate-tasks
     depends_on:
       postgres:
         condition: service_healthy
@@ -26,9 +26,65 @@ services:
       - ./migrations:/migrations
     entrypoint: ["migrate"]
     command:
-      - "-path=/migrations"
-      - "-database=postgres://user:pass@postgres:5432/db?sslmode=disable"
+      - "-path=/migrations/tasks/"
+      - "-database=postgres://user:pass@postgres:5432/tasks?sslmode=disable"
       - "up"
+    restart: on-failure
+
+  postgres-users-consumer:
+    image: postgres:16
+    container_name: postgres-users-consumer
+    environment:
+      POSTGRES_DB: users-consumer
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: "pass"
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data_users_consumer:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d users-consumer" ]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    restart: on-failure
+
+  postgres-users-producer:
+    image: postgres:16
+    container_name: postgres-users-producer
+    environment:
+      POSTGRES_DB: users-producer
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: "pass"
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_data_users_producer:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d users-producer" ]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  migrate-users:
+    image: migrate/migrate:v4.16.2
+    container_name: migrate-users
+    depends_on:
+      postgres-users-consumer:
+        condition: service_healthy
+      postgres-users-producer:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        migrate -path=/migrations/users \
+          -database="postgres://user:pass@postgres-users-producer:5432/users-producer?sslmode=disable" up
+
+        migrate -path=/migrations/users \
+          -database="postgres://user:pass@postgres-users-consumer:5432/users-consumer?sslmode=disable" up
     restart: on-failure
 
   redpanda:
@@ -75,7 +131,7 @@ services:
     build:
       context: .
       dockerfile: ./internal/config/Dockerfile
-    container_name: api
+    container_name: tasks
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,9 +139,9 @@ services:
         condition: service_started
       topic-init:
         condition: service_completed_successfully
-      migrate:
+      migrate-tasks:
         condition: service_completed_successfully
-    command: ["/bin/api"]
+    command: ["/bin/tasks"]
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -102,7 +158,7 @@ services:
         condition: service_started
       topic-init:
         condition: service_completed_successfully
-      migrate:
+      migrate-tasks:
         condition: service_completed_successfully
     command: ["/bin/consumer"]
     ports:
@@ -121,7 +177,7 @@ services:
         condition: service_started
       topic-init:
         condition: service_completed_successfully
-      migrate:
+      migrate-tasks:
         condition: service_completed_successfully
     command: [ "/bin/worker" ]
     ports:
@@ -155,8 +211,9 @@ services:
     restart: unless-stopped
 
 volumes:
-  pg_data:
-    name: pg_data
+  pg_data_tasks:
+  pg_data_users_consumer:
+  pg_data_users_producer:
   redpanda_data:
   prometheus_data:
   grafana_data:

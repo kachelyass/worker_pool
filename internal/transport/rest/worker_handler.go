@@ -3,8 +3,8 @@ package rest
 import (
 	"encoding/json"
 	"net/http"
-	"worker_pool/internal/app/handlers/models"
 	"worker_pool/internal/app/workerpool"
+	"worker_pool/internal/transport/rest/httpmodels"
 )
 
 type Server struct {
@@ -25,7 +25,7 @@ func (s *Server) GetWorkers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) SetWorkers(w http.ResponseWriter, r *http.Request) {
-	var req models.SetWorkersRequest
+	var req httpmodels.SetWorkersRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid json body", http.StatusBadRequest)
 		return
