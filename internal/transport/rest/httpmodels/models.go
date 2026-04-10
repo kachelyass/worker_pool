@@ -1,4 +1,4 @@
-package models
+package httpmodels
 
 type Task struct {
 	ID          int    `json:"id"`
@@ -8,9 +8,4 @@ type Task struct {
 
 type SetWorkersRequest struct {
 	Count int `json:"count"`
-}
-
-type CreateTaskMessage struct {
-	ExternalID  string `json:"external_id"`
-	Description string `json:"description"`
 }

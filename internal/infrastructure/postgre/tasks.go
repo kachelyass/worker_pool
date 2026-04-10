@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
-	"worker_pool/internal/app/handlers/models"
+	"worker_pool/internal/transport/rest/httpmodels"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,16 +18,16 @@ func NewTaskStore(db *pgxpool.Pool) *TaskStore {
 	return &TaskStore{db: db}
 }
 
-func (s *TaskStore) GetAll(ctx context.Context) ([]models.Task, error) {
+func (s *TaskStore) GetAll(ctx context.Context) ([]httpmodels.Task, error) {
 	rows, err := s.db.Query(ctx, `SELECT id, description FROM tasks`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var tasks []models.Task
+	var tasks []httpmodels.Task
 	for rows.Next() {
-		var task models.Task
+		var task httpmodels.Task
 		if err := rows.Scan(&task.ID, &task.Description); err != nil {
 			log.Printf("GetAll error: %s", err)
 			return nil, err
@@ -40,8 +40,8 @@ func (s *TaskStore) GetAll(ctx context.Context) ([]models.Task, error) {
 	return tasks, nil
 }
 
-func (s *TaskStore) GetByID(ctx context.Context, id int) (models.Task, error) {
-	var task models.Task
+func (s *TaskStore) GetByID(ctx context.Context, id int) (httpmodels.Task, error) {
+	var task httpmodels.Task
 	err := s.db.QueryRow(ctx, `SELECT * FROM tasks WHERE id = $1 `, id).Scan(&task.ID, &task.Description, &task.Status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return task, nil
@@ -52,7 +52,7 @@ func (s *TaskStore) GetByID(ctx context.Context, id int) (models.Task, error) {
 	return task, nil
 }
 
-func (s *TaskStore) Create(ctx context.Context, task models.Task) (models.Task, error) {
+func (s *TaskStore) Create(ctx context.Context, task httpmodels.Task) (httpmodels.Task, error) {
 	err := s.db.QueryRow(ctx, `INSERT INTO tasks(description) VALUES ($1) RETURNING id, description, status`, task.Description).Scan(&task.ID, &task.Description, &task.Status)
 	if err != nil {
 		return task, err
@@ -91,8 +91,8 @@ RETURNING tasks.id`, limit)
 	return ids, nil
 }
 
-func (s *TaskStore) MarkDone(ctx context.Context, id int) (models.Task, error) {
-	var task models.Task
+func (s *TaskStore) MarkDone(ctx context.Context, id int) (httpmodels.Task, error) {
+	var task httpmodels.Task
 	err := s.db.QueryRow(ctx, `UPDATE tasks SET status = 'done' WHERE id = $1 RETURNING id, description, status`, id).Scan(&task.ID, &task.Description, &task.Status)
 	if err != nil {
 		return task, err

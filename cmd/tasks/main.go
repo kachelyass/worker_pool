@@ -9,9 +9,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"worker_pool/internal/app/handlers"
 	"worker_pool/internal/infrastructure/kafka"
 	"worker_pool/internal/infrastructure/postgre"
+	"worker_pool/internal/transport/rest"
 	"worker_pool/pkg/metrics/httpmetrics"
 	"worker_pool/pkg/metrics/postgresmetrics"
 
@@ -40,7 +40,7 @@ func main() {
 	}
 	defer producer.Close()
 
-	taskHandler := handlers.NewTaskHandler(store, producer)
+	taskHandler := rest.NewTaskHandler(store, producer)
 
 	httpmetrics.Init()
 	postgresmetrics.Init()

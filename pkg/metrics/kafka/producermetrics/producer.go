@@ -1,4 +1,4 @@
-package kafkametrics
+package producermetrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
@@ -6,7 +6,7 @@ var (
 	KafkaProduceTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "kafka_produce_total",
-			Help: "Total number of Kafka produce attempts.",
+			Help: "Total number of successfully produced Kafka messages.",
 		},
 		[]string{"topic"},
 	)
@@ -14,7 +14,7 @@ var (
 	KafkaProduceErrorsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "kafka_produce_errors_total",
-			Help: "Total number of Kafka produce errors.",
+			Help: "Total number of failed Kafka produce operations.",
 		},
 		[]string{"topic"},
 	)
@@ -25,12 +25,6 @@ var (
 			Help:    "Kafka produce duration in seconds.",
 			Buckets: prometheus.DefBuckets,
 		},
-		[]string{"topic"})
-
-	KafkaConsumerRebalancesTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "kafka_consumer_rebalances_total",
-			Help: "Total number of Kafka consumer group rebalances.",
-		},
+		[]string{"topic"},
 	)
 )

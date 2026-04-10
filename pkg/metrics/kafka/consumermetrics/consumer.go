@@ -1,4 +1,4 @@
-package kafkametrics
+package consumermetrics
 
 import "github.com/prometheus/client_golang/prometheus"
 

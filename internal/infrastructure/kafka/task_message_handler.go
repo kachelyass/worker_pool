@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"worker_pool/internal/app/handlers/models"
+	"worker_pool/internal/transport/kafka/kafkamodels"
+	"worker_pool/internal/transport/rest/httpmodels"
 )
 
 type MessageStore interface {
-	Create(ctx context.Context, task models.Task) (models.Task, error)
+	Create(ctx context.Context, task httpmodels.Task) (httpmodels.Task, error)
 }
 
 type MessageCreateHandler struct {
@@ -20,13 +21,13 @@ func NewMessageCreateHandler(store MessageStore) *MessageCreateHandler {
 }
 
 func (h *MessageCreateHandler) Handle(ctx context.Context, key []byte, value []byte) error {
-	var msg models.CreateTaskMessage
+	var msg kafkamodels.CreateTaskMessage
 
 	if err := json.Unmarshal(value, &msg); err != nil {
 		return fmt.Errorf("unmarshal create task message: %w", err)
 	}
 
-	_, err := h.store.Create(ctx, models.Task{
+	_, err := h.store.Create(ctx, httpmodels.Task{
 		Description: msg.Description,
 		Status:      "pending",
 	})

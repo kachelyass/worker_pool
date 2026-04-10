@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"worker_pool/internal/app/handlers"
 	"worker_pool/internal/app/workerpool"
 	"worker_pool/internal/infrastructure/postgre"
+	"worker_pool/internal/transport/rest"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -36,7 +36,7 @@ func main() {
 	queueSize := 100
 
 	pool := workerpool.NewPoolManager(handler, queueSize)
-	server := handlers.NewServer(pool)
+	server := rest.NewServer(pool)
 
 	pool.AddWorkers(workersCount)
 

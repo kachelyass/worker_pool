@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/IBM/sarama"
 )
@@ -58,7 +57,6 @@ func (c *Consumer) Consume(ctx context.Context) error {
 			}
 			return fmt.Errorf("consume messages: %w", err)
 		}
-
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -74,7 +72,6 @@ type consumerGroupHandler struct {
 }
 
 func (h *consumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
-	kafkam.KafkaConsumerRebalancesTotal.Inc()
 	return nil
 }
 
@@ -87,19 +84,11 @@ func (h *consumerGroupHandler) ConsumeClaim(
 	claim sarama.ConsumerGroupClaim,
 ) error {
 	for msg := range claim.Messages() {
-		start := time.Now()
-
 		err := h.handler.Handle(session.Context(), msg.Key, msg.Value)
-		kafkam.KafkaConsumeDuration.WithLabelValues(msg.Topic).Observe(time.Since(start).Seconds())
-
 		if err != nil {
-			kafkam.KafkaConsumeErrorsTotal.WithLabelValues(msg.Topic).Inc()
 			return err
 		}
-
 		session.MarkMessage(msg, "")
-		kafkam.KafkaConsumeTotal.WithLabelValues(msg.Topic).Inc()
 	}
-
 	return nil
 }

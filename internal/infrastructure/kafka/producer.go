@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-	"worker_pool/internal/app/handlers/models"
+	"worker_pool/internal/transport/kafka/kafkamodels"
+	"worker_pool/pkg/metrics/kafka/producermetrics"
 
 	"github.com/IBM/sarama"
 )
@@ -33,15 +34,16 @@ func NewProducer(brokers []string, clientID string, topic string) (*Producer, er
 }
 
 func (p *Producer) Close() error {
-
 	return p.producer.Close()
 }
 
 func (p *Producer) Publish(key string, value []byte) error {
 	start := time.Now()
 	defer func() {
-		kafkam.KafkaProduceDuration.WithLabelValues(p.topic).Observe(time.Since(start).Seconds())
+		producermetrics.KafkaProduceDuration.WithLabelValues(p.topic).
+			Observe(time.Since(start).Seconds())
 	}()
+
 	msg := &sarama.ProducerMessage{
 		Topic: p.topic,
 		Value: sarama.ByteEncoder(value),
@@ -49,20 +51,20 @@ func (p *Producer) Publish(key string, value []byte) error {
 	if key != "" {
 		msg.Key = sarama.StringEncoder(key)
 	}
+
 	partition, offset, err := p.producer.SendMessage(msg)
 	if err != nil {
-		kafkam.KafkaProduceErrorsTotal.WithLabelValues(p.topic).Inc()
-		kafkam.KafkaProduceDuration.WithLabelValues(p.topic).Observe(time.Since(start).Seconds())
+		producermetrics.KafkaProduceErrorsTotal.WithLabelValues(p.topic).Inc()
 		return fmt.Errorf("error sending message to kafka: %w", err)
 	}
-	kafkam.KafkaProduceTotal.WithLabelValues(p.topic).Inc()
-	kafkam.KafkaProduceDuration.WithLabelValues(p.topic).Observe(time.Since(start).Seconds())
+
+	producermetrics.KafkaProduceTotal.WithLabelValues(p.topic).Inc()
 	fmt.Printf("message sent to partition %d at offset %d\n", partition, offset)
-	return err
+	return nil
 }
 
 func (p *Producer) PublishCreateTask(description string) error {
-	msg := models.CreateTaskMessage{
+	msg := kafkamodels.CreateTaskMessage{
 		Description: description,
 	}
 

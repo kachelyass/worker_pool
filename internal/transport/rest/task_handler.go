@@ -1,21 +1,21 @@
-package handlers
+package rest
 
 import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"worker_pool/internal/app/handlers/models"
+	"worker_pool/internal/transport/rest/httpmodels"
 )
 
 type TaskStore interface {
-	GetAll(ctx context.Context) ([]models.Task, error)
-	GetByID(ctx context.Context, id int) (models.Task, error)
-	Create(ctx context.Context, task models.Task) (models.Task, error)
+	GetAll(ctx context.Context) ([]httpmodels.Task, error)
+	GetByID(ctx context.Context, id int) (httpmodels.Task, error)
+	Create(ctx context.Context, task httpmodels.Task) (httpmodels.Task, error)
 }
 
 type TaskReader interface {
-	GetAll(ctx context.Context) ([]models.Task, error)
-	GetByID(ctx context.Context, id int) (models.Task, error)
+	GetAll(ctx context.Context) ([]httpmodels.Task, error)
+	GetByID(ctx context.Context, id int) (httpmodels.Task, error)
 }
 
 type TaskPublisher interface {
