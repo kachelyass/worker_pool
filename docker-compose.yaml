@@ -49,6 +49,21 @@ services:
       retries: 10
     restart: on-failure
 
+  migrate-users-consumer:
+    image: migrate/migrate:v4.16.2
+    container_name: migrate-users-consumer
+    depends_on:
+      postgres-users-consumer:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    entrypoint: [ "migrate" ]
+    command:
+      - "-path=/migrations/users/consumer/"
+      - "-database=postgres://user:pass@postgres-users-consumer:5432/users-consumer?sslmode=disable"
+      - "up"
+    restart: on-failure
+
   postgres-users-producer:
     image: postgres:16
     container_name: postgres-users-producer
@@ -66,25 +81,19 @@ services:
       timeout: 5s
       retries: 10
 
-  migrate-users:
+  migrate-users-producer:
     image: migrate/migrate:v4.16.2
-    container_name: migrate-users
+    container_name: migrate-users-producer
     depends_on:
-      postgres-users-consumer:
-        condition: service_healthy
       postgres-users-producer:
         condition: service_healthy
     volumes:
       - ./migrations:/migrations
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        migrate -path=/migrations/users \
-          -database="postgres://user:pass@postgres-users-producer:5432/users-producer?sslmode=disable" up
-
-        migrate -path=/migrations/users \
-          -database="postgres://user:pass@postgres-users-consumer:5432/users-consumer?sslmode=disable" up
+    entrypoint: [ "migrate" ]
+    command:
+      - "-path=/migrations/users/producer/"
+      - "-database=postgres://user:pass@postgres-users-producer:5432/users-producer?sslmode=disable"
+      - "up"
     restart: on-failure
 
   redpanda:
