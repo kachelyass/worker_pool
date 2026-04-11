@@ -112,6 +112,31 @@ services:
     volumes:
       - redpanda_data:/var/lib/redpanda/data
 
+  users-broker:
+    image: docker.redpanda.com/redpandadata/redpanda:v25.3.11
+    container_name: users-broker
+    command:
+      - redpanda
+      - start
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19093
+      - --advertise-kafka-addr
+      - internal://users-broker:9092,external://localhost:19093
+      - --rpc-addr
+      - users-broker:33145
+      - --advertise-rpc-addr
+      - users-broker:33145
+      - --mode
+      - dev-container
+      - --smp
+      - "1"
+      - --default-log-level=info
+    ports:
+      - "19093:19093"
+      - "29644:9644"
+    volumes:
+      - users_broker_data:/var/lib/redpanda/data
+
   topic-init:
     image: docker.redpanda.com/redpandadata/redpanda:v25.3.11
     depends_on:
@@ -125,6 +150,21 @@ services:
           sleep 2
         done
         rpk topic create jobs -p 3 -r 1 --if-not-exists -X brokers=redpanda:9092
+        echo "topics created"
+
+  users-topic-init:
+    image: docker.redpanda.com/redpandadata/redpanda:v25.3.11
+    depends_on:
+      - users-broker
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        until rpk cluster info -X brokers=users-broker:9092; do
+          echo "waiting for users-broker..."
+          sleep 2
+        done
+        rpk topic create users -p 3 -r 1 --if-not-exists -X brokers=users-broker:9092
         echo "topics created"
 
   api:
@@ -215,5 +255,6 @@ volumes:
   pg_data_users_consumer:
   pg_data_users_producer:
   redpanda_data:
+  users_broker_data:
   prometheus_data:
   grafana_data:
